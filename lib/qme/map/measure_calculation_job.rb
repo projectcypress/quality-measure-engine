@@ -2,7 +2,7 @@ module QME
   module MapReduce
     # A delayed_job that allows for measure calculation by a delayed_job worker. Can be created as follows:
     #
-    #     Delayed::Job.enqueue QME::MapRedude::MeasureCalculationJob.new(quality_report, :effective_date => 1291352400, :test_id => xyzzy)
+    #     Delayed::Job.enqueue QME::MapRedude::MeasureCalculationJob.new(quality_report, :effective_date => 1291352400, :correlation_id => xyzzy)
     #
     # MeasureCalculationJob will check to see if a measure has been calculated before running the calculation. It will do this by
     # checking the status of the quality report that this calculation job was created with.

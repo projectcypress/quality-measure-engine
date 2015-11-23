@@ -14,7 +14,7 @@ module QME
       # Create a new Executor for a specific measure, effective date and patient population.
       # @param [String] measure_id the measure identifier
       # @param [String] sub_id the measure sub-identifier or null if the measure is single numerator
-      # @param [Hash] parameter_values a hash that may contain the following keys: 'effective_date' the measurement period end date, 'test_id' an identifier for a specific set of patients
+      # @param [Hash] parameter_values a hash that may contain the following keys: 'effective_date' the measurement period end date, 'correlation_id' an identifier for a specific set of patients
       def initialize(measure_id,sub_id, parameter_values)
 
         @measure_id = measure_id
@@ -38,7 +38,7 @@ module QME
         match = {'value.measure_id' => @measure_id,
                  'value.sub_id'           => @sub_id,
                  'value.effective_date'   => @parameter_values['effective_date'],
-                 'value.test_id'          => @parameter_values['test_id'],
+                 'value.correlation_id'          => @parameter_values['correlation_id'],
                  'value.manual_exclusion' => {'$in' => [nil, false]}}
 
         if(filters)
@@ -80,7 +80,7 @@ module QME
         match = {'value.measure_id' => @measure_id,
                  'value.sub_id'           => @sub_id,
                  'value.effective_date'   => @parameter_values['effective_date'],
-                 'value.test_id'          => @parameter_values['test_id'],
+                 'value.correlation_id'          => @parameter_values['correlation_id'],
                  'value.manual_exclusion' => {'$in' => [nil, false]}}
 
         keys = @measure_def.population_ids.keys - [QME::QualityReport::OBSERVATION, "stratification"]
@@ -214,7 +214,7 @@ module QME
                          :reduce => "function(key, values){return values;}",
                          :out => {:reduce => 'patient_cache', :sharded => true},
                          :finalize => measure.finalize_function,
-                         :query => {:medical_record_number => patient_id, :test_id => @parameter_values["test_id"]})
+                         :query => {:medical_record_number => patient_id, :correlation_id => @parameter_values["correlation_id"]})
         QME::ManualExclusion.apply_manual_exclusions(@measure_id,@sub_id)
 
       end
@@ -229,7 +229,7 @@ module QME
                                   :reduce => "function(key, values){return values;}",
                                   :out => {:inline => true},
                                   :raw => true,
-                                  :query => {:medical_record_number => patient_id, :test_id => @parameter_values["test_id"]})
+                                  :query => {:medical_record_number => patient_id, :correlation_id => @parameter_values["correlation_id"]})
 
         raise result['err'] if result['ok']!=1
         result['results'][0]['value']

@@ -33,7 +33,7 @@ class QualityReportTest < MiniTest::Unit::TestCase
         "last" => "Edwards",
         "gender" => "F",
         "birthdate" => Time.gm(1940, 9, 19).to_i,
-        "test_id" => nil,
+        "correlation_id" => nil,
         "provider_performances" => nil,
         "race" => {
           "code" => "2106-3",

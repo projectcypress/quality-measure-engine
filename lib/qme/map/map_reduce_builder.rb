@@ -79,7 +79,7 @@ module QME
         # taken from the supplied params
         # always true for actual measures, not always true for unit tests
         if (@measure_def.map_fn)
-          template = ERB.new(@measure_def.map_fn)
+          template = ERB.new(map_function)
           context = Context.new(@db, @params)
           @measure_def.map_fn = template.result(context.get_binding)
         end
@@ -88,7 +88,23 @@ module QME
       # Get the map function for the measure
       # @return [String] the map function
       def map_function
-        @measure_def.map_fn
+        # check for old bundle formate for backwards compatibility of old bundles
+        if @measure_def.map_fn.lstrip.start_with?("function()")
+          @measure_def.map_fn
+        else
+          "function() {
+            var patient = this;
+            hqmfjs = {}
+            <% if (!correlation_id.nil? && correlation_id.class==Moped::BSON::ObjectId) %>
+              var correlation_id = new ObjectId(\"<%= correlation_id %>\");
+            <% else %>
+              var correlation_id = null;
+            <% end %>
+            <%= init_js_frameworks %>
+            #{@measure_def.map_fn}
+          };
+          "
+        end
       end
 
       # Get the reduce function for the measure, this is a simple
@@ -101,8 +117,8 @@ module QME
         "function (key, value) {
           var patient = value;
           patient.measure_id = \"#{@measure_def['id']}\";\n"
-        if @params['test_id'] && @params['test_id'].class==BSON::ObjectId
-          reduce += "  patient.test_id = new ObjectId(\"#{@params['test_id']}\");\n"
+        if @params['correlation_id'] && @params['correlation_id'].class==BSON::ObjectId
+          reduce += "  patient.correlation_id = new ObjectId(\"#{@params['correlation_id']}\");\n"
         end
         if @measure_def.sub_id
           reduce += "  patient.sub_id = \"#{@measure_def.sub_id}\";\n"
