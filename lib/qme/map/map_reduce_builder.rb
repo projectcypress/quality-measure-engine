@@ -102,6 +102,8 @@ module QME
             <% end %>
             <%= init_js_frameworks %>
             #{@measure_def.map_fn}
+            var res = hqmfjs.calculate(new hQuery.Patient(patient), effective_date,correlation_id);
+            if (res['IPP'] > 0) emit(ObjectId(), res);
           };
           "
         end
