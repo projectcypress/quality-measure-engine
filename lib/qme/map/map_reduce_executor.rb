@@ -53,8 +53,8 @@ module QME
           end
           if (filters['providers'] && filters['providers'].size > 0)
             providers = filters['providers'].map { |pv| {'providers' => BSON::ObjectId.from_string(pv) } }
-            pipeline.concat [{'$project' => {'value' => 1, 'providers' => "$value.provider_performances.provider_id"}}, 
-                             {'$unwind' => '$providers'}, 
+            pipeline.concat [{'$project' => {'value' => 1, 'providers' => "$value.provider_performances.provider_id"}},
+                             {'$unwind' => '$providers'},
                              {'$match' => {'$or' => providers}},
                              {'$group' => {"_id" => "$_id", "value" => {"$first" => "$value"}}}]
           end
