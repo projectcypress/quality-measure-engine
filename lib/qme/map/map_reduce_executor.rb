@@ -77,11 +77,7 @@ module QME
       #Calculate all of the supoplemental data elements
       def calculate_supplemental_data_elements
 
-        match = {'value.measure_id' => @measure_id,
-                 'value.sub_id'           => @sub_id,
-                 'value.effective_date'   => @parameter_values['effective_date'],
-                 'value.test_id'          => @parameter_values['test_id'],
-                 'value.manual_exclusion' => {'$in' => [nil, false]}}
+        match = build_query[0]['$match']
 
         keys = @measure_def.population_ids.keys - [QME::QualityReport::OBSERVATION, "stratification"]
         supplemental_data = Hash[*keys.map{|k| [k,{QME::QualityReport::RACE => {},
