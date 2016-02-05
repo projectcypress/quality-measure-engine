@@ -53,8 +53,8 @@ module QME
           end
           if (filters['providers'] && filters['providers'].size > 0)
             providers = filters['providers'].map { |pv| {'providers' => BSON::ObjectId.from_string(pv) } }
-            pipeline.concat [{'$project' => {'value' => 1, 'providers' => "$value.provider_performances.provider_id"}}, 
-                             {'$unwind' => '$providers'}, 
+            pipeline.concat [{'$project' => {'value' => 1, 'providers' => "$value.provider_performances.provider_id"}},
+                             {'$unwind' => '$providers'},
                              {'$match' => {'$or' => providers}},
                              {'$group' => {"_id" => "$_id", "value" => {"$first" => "$value"}}}]
           end
@@ -184,11 +184,12 @@ module QME
         cv_pipeline << {'$group' => {'_id' => '$value.values', 'count' => {'$sum' => 1}}}
 
         aggregate = get_db.command(:aggregate => 'patient_cache', :pipeline => cv_pipeline)
+        aggregate_document = aggregate.documents[0]
 
-        raise RuntimeError, "Aggregation Failed" if aggregate['ok'] != 1
+        raise RuntimeError, "Aggregation Failed" if aggregate_document['ok'] != 1
 
         frequencies = {}
-        aggregate.documents[0]['result'].each do |freq_count_pair|
+        aggregate_document['result'].each do |freq_count_pair|
           frequencies[freq_count_pair['_id']] = freq_count_pair['count']
         end
         QME::MapReduce::CVAggregator.send(@measure_def.aggregator.parameterize, frequencies)
@@ -233,12 +234,13 @@ module QME
                                   :map => measure.map_function,
                                   :reduce => "function(key, values){return values;}",
                                   :out => {:inline => true},
-                                  :raw => true,
+                                  # :raw => true,
                                   :query => {:medical_record_number => patient_id, :test_id => @parameter_values["test_id"]})
 
-        
+
         raise operation.documents[0]['err'] if !operation.successful?
-          operation.documents[0]['results'][0]['value']
+        return nil if operation.documents[0]['results'].empty?
+        operation.documents[0]['results'][0]['value']
       end
 
 
