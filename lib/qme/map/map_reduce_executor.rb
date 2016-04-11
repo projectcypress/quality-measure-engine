@@ -51,6 +51,9 @@ module QME
           if (filters['genders'] && filters['genders'].size > 0)
             match['value.gender'] = {'$in' => filters['genders']}
           end
+          if (filters['patients'] && filters['patients'].size > 0)
+            match['value.patient_id'] = {'$in' => filters['patients']}
+          end
           if (filters['providers'] && filters['providers'].size > 0)
             providers = filters['providers'].map { |pv| {'providers' => BSON::ObjectId.from_string(pv) } }
             pipeline.concat [{'$project' => {'value' => 1, 'providers' => "$value.provider_performances.provider_id"}},
@@ -87,15 +90,19 @@ module QME
         supplemental_data = Hash[*keys.map{|k| [k,{QME::QualityReport::RACE => {},
                                                    QME::QualityReport::ETHNICITY => {},
                                                    QME::QualityReport::SEX => {},
-                                                   QME::QualityReport::PAYER => {}}]}.flatten]
-
+                                                   QME::QualityReport::PAYER => {}}]}.flatten]                                      
         keys.each do |pop_id|
-          _match = match.clone
+          pline = build_query
+
+          _match = pline[0]["$match"]
           _match["value.#{pop_id}"] = {"$gt" => 0}
           SUPPLEMENTAL_DATA_ELEMENTS.each_pair do |supp_element,location|
             group1 = {"$group" => { "_id" => { "id" => "$_id", "val" => location}}}
             group2 = {"$group" => {"_id" => "$_id.val", "val" =>{"$sum" => 1} }}
-            pipeline = [{"$match" =>_match},group1,group2]
+            pipeline = pline.clone
+            pipeline << group1
+            pipeline << group2
+
             aggregate = get_db.command(:aggregate => 'patient_cache', :pipeline => pipeline)
             aggregate_document = aggregate.documents[0]
             v = {}
@@ -180,11 +187,12 @@ module QME
         cv_pipeline << {'$group' => {'_id' => '$value.values', 'count' => {'$sum' => 1}}}
 
         aggregate = get_db.command(:aggregate => 'patient_cache', :pipeline => cv_pipeline)
+        aggregate_document = aggregate.documents[0]
 
-        raise RuntimeError, "Aggregation Failed" if aggregate['ok'] != 1
+        raise RuntimeError, "Aggregation Failed" if aggregate_document['ok'] != 1
 
         frequencies = {}
-        aggregate.documents[0]['result'].each do |freq_count_pair|
+        aggregate_document['result'].each do |freq_count_pair|
           frequencies[freq_count_pair['_id']] = freq_count_pair['count']
         end
         QME::MapReduce::CVAggregator.send(@measure_def.aggregator.parameterize, frequencies)
@@ -229,12 +237,13 @@ module QME
                                   :map => measure.map_function,
                                   :reduce => "function(key, values){return values;}",
                                   :out => {:inline => true},
-                                  :raw => true,
+                                  # :raw => true,
                                   :query => {:medical_record_number => patient_id, :test_id => @parameter_values["test_id"]})
 
-        
+
         raise operation.documents[0]['err'] if !operation.successful?
-          operation.documents[0]['results'][0]['value']
+        return nil if operation.documents[0]['results'].empty?
+        operation.documents[0]['results'][0]['value']
       end
 
 
