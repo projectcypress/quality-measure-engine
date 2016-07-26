@@ -244,7 +244,6 @@ module QME
                                   :raw => true,
                                   :query => {:medical_record_number => patient_id, :correlation_id => @parameter_values["correlation_id"]})
 
-
         raise operation.documents[0]['err'] if !operation.successful?
         return nil if operation.documents[0]['results'].empty?
         operation.documents[0]['results'][0]['value']
